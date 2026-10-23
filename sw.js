@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cmd-diag-pwa-v1';
+const CACHE_NAME = 'cmd-diag-pwa-v3';
 const ASSETS = [
   './',
   './index.html',
