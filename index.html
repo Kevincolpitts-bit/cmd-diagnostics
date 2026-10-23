@@ -25,7 +25,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.5; padding-bottom: 80px; }
 
-    /* App Bar */
     header {
       background: #10161d;
       border-bottom: 3px solid var(--cat-yellow);
@@ -47,7 +46,6 @@
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 0.85rem;
-      letter-spacing: 0.8px;
     }
     .brand h1 { font-size: 1.1rem; font-weight: 800; }
     .status-bar { display: flex; align-items: center; gap: 8px; }
@@ -72,7 +70,6 @@
       display: none;
     }
 
-    /* Bottom / Top Navigation */
     .nav-tabs {
       display: flex;
       gap: 6px;
@@ -101,7 +98,6 @@
 
     .container { max-width: 1040px; margin: 16px auto; padding: 0 12px; }
 
-    /* Multi-Code Triage Banner */
     .queue-banner {
       background: #1a222d;
       border: 1px solid #384656;
@@ -136,7 +132,6 @@
       color: #f2cc60;
     }
 
-    /* Search & Filter */
     .search-panel {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -165,7 +160,7 @@
       font-size: 0.95rem;
     }
 
-    .code-pills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 170px; overflow-y: auto; padding-right: 4px; }
+    .code-pills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px; }
     .pill {
       background: #1f2935;
       border: 1px solid #334152;
@@ -176,17 +171,18 @@
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
+      gap: 10px;
     }
     .pill.active { background: var(--cat-yellow); color: #000; font-weight: 800; border-color: var(--cat-yellow); }
     .pill-add {
-      background: rgba(255,255,255,0.12);
-      padding: 1px 6px;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 6px;
       border-radius: 4px;
       font-size: 0.75rem;
+      font-weight: 700;
     }
 
-    /* Wizard Card */
     .wizard-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -286,22 +282,21 @@
 </header>
 
 <div class="nav-tabs">
-  <button class="tab-btn active" onclick="switchTab('diag')">🔧 Interactive Diagnostics</button>
-  <button class="tab-btn" onclick="switchTab('cal')">🎯 Calibration Matrix</button>
-  <button class="tab-btn" onclick="switchTab('esr')">📡 ESR 2.5 Radar Mod</button>
-  <button class="tab-btn" onclick="switchTab('fire')">🔥 LOP Fire Supp</button>
-  <button class="tab-btn" onclick="switchTab('net')">🌐 IP & Fuse Directory</button>
+  <button class="tab-btn active" onclick="switchTab('diag', event)">🔧 Diagnostics</button>
+  <button class="tab-btn" onclick="switchTab('cal', event)">🎯 Calibrations</button>
+  <button class="tab-btn" onclick="switchTab('esr', event)">📡 ESR 2.5 Radar</button>
+  <button class="tab-btn" onclick="switchTab('fire', event)">🔥 LOP Fire Supp</button>
+  <button class="tab-btn" onclick="switchTab('net', event)">🌐 IP & Fuses</button>
 </div>
 
 <div class="container">
 
   <!-- TAB 1: DIAGNOSTICS -->
   <div id="tab-diag">
-    <!-- Multi-Code Active Triage Queue -->
     <div class="queue-banner" id="queueBanner">
       <div class="queue-header">
-        <span class="queue-title">📋 Active Truck Fault Queue (Click [+] on any code below to triage multiple faults)</span>
-        <button class="btn-util" style="padding:4px 8px; font-size:0.75rem;" onclick="clearQueue()">Clear Queue</button>
+        <span class="queue-title">📋 Active Fault Queue (Click [+] to queue multiple faults)</span>
+        <button class="btn-util" style="padding:4px 8px; font-size:0.75rem;" onclick="clearQueue()">Clear</button>
       </div>
       <div class="queue-items" id="queueContainer"></div>
       <div id="priorityAlert" class="priority-alert hidden"></div>
@@ -309,7 +304,7 @@
 
     <div class="search-panel">
       <div class="search-row">
-        <input type="text" id="searchInput" class="search-input" placeholder="Enter Code or Symptom (e.g. E1153, E1252, E1374, E526, E398, 0838, LiDAR, Fan)..." oninput="renderPills()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search Code or Symptom (e.g. E1153, E1252, E1374, E526, E398)..." oninput="renderPills()">
         <select id="sysFilter" class="sys-select" onchange="renderPills()">
           <option value="ALL">All Systems</option>
           <option value="MCM">Autonomy / MCM (MID 039)</option>
@@ -329,52 +324,38 @@
   <div id="tab-cal" class="hidden">
     <div class="wizard-card">
       <h2>Maintenance Triggered Calibrations (SEBU8751 / REHS8845)</h2>
-      <p style="color:var(--text-muted); margin-bottom:12px;">Select the component you replaced or adjusted to see required calibrations before returning to Autonomous Production:</p>
       <table>
         <thead>
           <tr><th>Component Replaced / Adjusted</th><th>Cat ET Calibration</th><th>WebOCS / Autonomy Calibration</th></tr>
         </thead>
         <tbody>
-          <tr><td><strong>Steering Cylinder / Tie Rod / Alignment</strong></td><td>Steering Cylinder Position Sensors Cal + Trim Data Upload + Solenoid Cal (UENR2227)</td><td>Planning Checkout (Straight Ahead + Steering/Tracking Test)</td></tr>
-          <tr><td><strong>Primary Steering ECM / EH Steering Valve / Solenoids</strong></td><td>Arm Steering System / Solenoid Calibration (Steering Oil Hot)</td><td>Planning Checkout (Straight Ahead + Steering Test)</td></tr>
-          <tr><td><strong>Brake Solenoids / Brake Relay Valve / Brake ECM</strong></td><td>Brake Solenoid Calibration (UENR2210 - Brake Oil Hot)</td><td>Planning Checkout (Braking Test) or Perception Verification</td></tr>
-          <tr><td><strong>Suspension Cylinder (Charged/Adjusted)</strong></td><td>VIMS Payload Calibration (PAYCAL)</td><td>Check Radar/LiDAR Alignment; if adjusted, run Perception Cal + Planning Checkout</td></tr>
-          <tr><td><strong>LiDAR (#1) or LiDAR Mounting Bracket</strong></td><td>N/A</td><td>Mechanical Check/Adjust (SEBU8751) ➔ Perception Calibration ➔ Perception Verification</td></tr>
-          <tr><td><strong>Front Radar (#2-#7) or Radar Box</strong></td><td>N/A</td><td>Mechanical Alignment ➔ Perception Calibration ➔ Perception Verification</td></tr>
-          <tr><td><strong>GNSS Antenna / Mast / Front IMU</strong></td><td>N/A</td><td>GAMS Calibration ➔ Positioning Checkout ➔ Perception Calibration ➔ Perception Verification</td></tr>
+          <tr><td><strong>Steering Cylinder / Linkage</strong></td><td>Steering Cylinder Position Sensors Cal + Trim Data Upload (UENR2227)</td><td>Planning Checkout (Straight Ahead + Steering/Tracking Test)</td></tr>
+          <tr><td><strong>Primary Steering ECM / EH Valve</strong></td><td>Arm Steering System / Solenoid Calibration (Steering Oil Hot)</td><td>Planning Checkout (Straight Ahead + Steering Test)</td></tr>
+          <tr><td><strong>Brake Solenoids / Valve / ECM</strong></td><td>Brake Solenoid Calibration (UENR2210 - Brake Oil Hot)</td><td>Planning Checkout (Braking Test) or Perception Verification</td></tr>
+          <tr><td><strong>Suspension Cylinder</strong></td><td>VIMS Payload Calibration (PAYCAL)</td><td>Check Radar/LiDAR Alignment; run Perception Cal + Planning Checkout</td></tr>
+          <tr><td><strong>LiDAR (#1) or Bracket</strong></td><td>N/A</td><td>Mechanical Check/Adjust (SEBU8751) ➔ Perception Calibration ➔ Perception Verification</td></tr>
+          <tr><td><strong>Front Radars (#2-#7)</strong></td><td>N/A</td><td>Mechanical Alignment ➔ Perception Calibration ➔ Perception Verification</td></tr>
+          <tr><td><strong>GNSS Antenna / Mast / IMU</strong></td><td>N/A</td><td>GAMS Calibration ➔ Positioning Checkout ➔ Perception Calibration ➔ Perception Verification</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- TAB 3: ESR 2.5 RADAR MOD -->
+  <!-- TAB 3: ESR 2.5 RADAR -->
   <div id="tab-esr" class="hidden">
     <div class="wizard-card">
       <h2>ESR 1.0 to ESR 2.5 Radar Upgrade & Emergency Harness Mod</h2>
       <div class="step-box" style="margin-top:12px;">
-        <div class="step-title">Emergency Tail Harness Repin (When P/N 617-3216 is Out of Stock)</div>
+        <div class="step-title">Emergency Tail Harness Repin (P/N 617-3216 Out of Stock)</div>
         <p class="step-instructions">1. Move <strong>PIN 3 (Black 212 - Ground)</strong> to <strong>PIN 4</strong> on the radar connector.
-2. De-Pin <strong>PIN 1 (Yellow 166 - +12V Unswitched Battery)</strong> and heat-shrink/tape it back to the harness (ESR 2.5 only uses switched 12V on Pin 10).
+2. De-Pin <strong>PIN 1 (Yellow 166 - +12V Unswitched Battery)</strong> and heat-shrink/tape it back (ESR 2.5 uses Switched 12V on Pin 10 only).
 3. Install blanking plugs into unused cavities.
-4. Notch the radar mounting bracket (P/N 511-9464) per M0164397 to clear the outer case ribs on the ESR 2.5 radar.</p>
+4. Notch radar mounting bracket (P/N 511-9464) per M0164397 to clear outer case ribs.</p>
       </div>
-      <table>
-        <thead>
-          <tr><th>Pin #</th><th>ESR 1.0 (338-5298)</th><th>Wire ID</th><th>ESR 2.5 (611-3137)</th><th>Mod Action</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>1</td><td>Battery +12V</td><td>166-YL-18</td><td>NC</td><td>De-pin & heat shrink back</td></tr>
-          <tr><td>3</td><td>Ground</td><td>212-BK-18</td><td>NC</td><td>Move 212-BK to Pin 4</td></tr>
-          <tr><td>4</td><td>RxN</td><td>—</td><td><strong>Ground</strong></td><td>Insert 212-BK from Pin 3</td></tr>
-          <tr><td>9</td><td>PCAN Low (CAN-)</td><td>F714-GN-18</td><td><strong>PCAN Low (CAN-)</strong></td><td>Leave in Pin 9</td></tr>
-          <tr><td>10</td><td>Keyswitch +12V</td><td>161-PK-18</td><td><strong>Keyswitch +12V</strong></td><td>Leave in Pin 10</td></tr>
-          <tr><td>18</td><td>PCAN High (CAN+)</td><td>F713-YL-18</td><td><strong>PCAN High (CAN+)</strong></td><td>Leave in Pin 18</td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 
-  <!-- TAB 4: LOP FIRE SUPPRESSION -->
+  <!-- TAB 4: LOP FIRE SUPP -->
   <div id="tab-fire" class="hidden">
     <div class="wizard-card">
       <h2>CMD Fire Suppression Re-Work (Loss of Pressure System)</h2>
@@ -384,31 +365,30 @@
           <tr><th>I/O J2-31 (931-GY N/O)</th><th>I/O J2-36 (932-GN N/C)</th><th>State</th><th>Description</th></tr>
         </thead>
         <tbody>
-          <tr><td>Open</td><td>Ground</td><td><strong>Normal</strong></td><td>System >1050 kPa, Relay energized (24V on Pin 85)</td></tr>
-          <tr><td>Ground</td><td>Open</td><td><strong>Activated (E1286)</strong></td><td>System <1050 kPa or discharged, Relay de-energized</td></tr>
-          <tr><td>Open</td><td>Open</td><td><strong>Fault (FMI 03)</strong></td><td>Open circuit / both wires open</td></tr>
-          <tr><td>Ground</td><td>Ground</td><td><strong>Fault (FMI 04)</strong></td><td>Shorted circuit / both wires grounded</td></tr>
+          <tr><td>Open</td><td>Ground</td><td><strong>Normal</strong></td><td>System >1050 kPa, Relay energized</td></tr>
+          <tr><td>Ground</td><td>Open</td><td><strong>Triggered (E1286)</strong></td><td>System <1050 kPa or discharged</td></tr>
+          <tr><td>Open</td><td>Open</td><td><strong>Fault</strong></td><td>Open circuit / both open</td></tr>
+          <tr><td>Ground</td><td>Ground</td><td><strong>Fault</strong></td><td>Shorted circuit / both grounded</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- TAB 5: IP & FUSE DIRECTORY -->
+  <!-- TAB 5: IP & FUSES -->
   <div id="tab-net" class="hidden">
     <div class="wizard-card">
       <h2>Onboard IP Addresses & Command Cabinet Fuses</h2>
       <table>
         <thead>
-          <tr><th>Component / Web Interface</th><th>IP Address / URL</th><th>Notes</th></tr>
+          <tr><th>Device / Interface</th><th>IP Address / URL</th><th>Notes</th></tr>
         </thead>
         <tbody>
-          <tr><td>WebOCS Launcher (A6 ECM)</td><td><code>http://165.26.79.7:8000</code></td><td>Connect via Cab/Bumper RJ45</td></tr>
-          <tr><td>WebOCS Launcher (A5 ECM)</td><td><code>http://165.26.79.13:8000</code></td><td>5-ECM Cabinet</td></tr>
-          <tr><td>A6 Internal Switch (Auto ECM 1 / 2)</td><td><code>165.26.79.3</code> / <code>165.26.79.2</code></td><td>Login: <code>monitor</code> (no password)</td></tr>
-          <tr><td>PCS (Positioning Module)</td><td><code>165.26.79.6</code></td><td>Powered via PM400 (24V Fuse F10 - 15A)</td></tr>
-          <tr><td>LiDAR Sensor #1</td><td><code>192.168.3.043</code></td><td>24V Fuse F16 (15A) | PPS Buffer: 12V Fuse F6 (10A)</td></tr>
-          <tr><td>A-Stop Receivers (LH / RH)</td><td>CAN 1 (LH) / CAN 2 (RH)</td><td>12V Fuse Box: F7 (10A LH) & F8 (10A RH)</td></tr>
-          <tr><td>Front Radars</td><td>CAN Per Radar</td><td>12V Fuse Box: F1 (Keyswitch), F11 (LH/MID), F12 (RH)</td></tr>
+          <tr><td>WebOCS Launcher (A6)</td><td><code>http://165.26.79.7:8000</code></td><td>Firefox / Chrome</td></tr>
+          <tr><td>WebOCS Launcher (A5)</td><td><code>http://165.26.79.13:8000</code></td><td>5-ECM Cabinet</td></tr>
+          <tr><td>A6 Internal Switch (ECM 1 / 2)</td><td><code>165.26.79.3</code> / <code>165.26.79.2</code></td><td>User: <code>monitor</code> (No pass)</td></tr>
+          <tr><td>PCS (Positioning Module)</td><td><code>165.26.79.6</code></td><td>PM400 Power (24V Fuse F10 - 15A)</td></tr>
+          <tr><td>LiDAR Sensor #1</td><td><code>192.168.3.043</code></td><td>24V Fuse F16 (15A)</td></tr>
+          <tr><td>A-Stop Receivers (LH / RH)</td><td>CAN 1 (LH) / CAN 2 (RH)</td><td>12V Fuse Box: F7 (10A) & F8 (10A)</td></tr>
         </tbody>
       </table>
     </div>
@@ -417,14 +397,13 @@
 </div>
 
 <script>
-// Register Service Worker for Offline PWA Support
+// Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
-// Handle PWA Install Prompt
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -441,43 +420,357 @@ function installPWA() {
   }
 }
 
-// EXPANDED SIS DIAGNOSTIC DATABASE
 const faultDB = {
   "E1480": {
     code: "E1480",
     priority: 1,
-    triggers: ["E1252"],
     title: "GPS Receiver Antenna Separation Distance Out of Range",
     mid: "MID 039 (MCM)",
     sys: "MCM",
-    action: "Action Code 4: Controlled Stop",
-    desc: "Reported distance between Primary (LH) and Secondary (RH) GNSS antennas is out of spec (Target: 2.0m ± 0.05m on 793F). ALWAYS resolve E1480 before E1252.",
+    action: "Stop Machine Safely",
+    desc: "Reported distance between primary and secondary GNSS antennas is out of spec. Resolve E1480 before E1252.",
     steps: {
       "1": {
         title: "Test Step 1: Inspect Primary & Secondary GNSS Antennas",
         text: "Inspect both GNSS antenna enclosures on the front mast for cracks, water ingress, or loose mounting bolts.",
         expected: "Both antennas are intact and tightly mounted.",
         options: [
-          { label: "OK — Antennas are undamaged and tight", type: "pass", next: "2" },
+          { label: "OK — Antennas intact and tight", type: "pass", next: "2" },
           { label: "NOT OK — Antenna cracked or loose", type: "fail", next: "REPAIR_ANTENNA" }
         ]
       },
       "2": {
-        title: "Test Step 2: Inspect Antenna Mast Structure & Alignment",
-        text: "Inspect both GNSS masts and the horizontal cross-beam for cracks, bends, or loose mounting hardware. Verify baseline separation in WebOCS GAMS tab (2.000m ± 0.05m).",
-        expected: "Masts are straight, rigid, and within 50mm tolerance.",
+        title: "Test Step 2: Inspect Antenna Mast & Verify Baseline",
+        text: "Verify baseline separation in WebOCS GAMS tab (2.000m ± 0.05m). Inspect mast for bends or loose hardware.",
+        expected: "Masts are rigid and baseline is correct.",
         options: [
-          { label: "OK — Masts are straight and secure", type: "pass", next: "3" },
-          { label: "NOT OK — Mast bent, cracked, or out of alignment", type: "fail", next: "REPAIR_MAST" }
+          { label: "OK — Mast secure & baseline good", type: "pass", next: "REPAIR_GAMS" },
+          { label: "NOT OK — Mast bent or loose", type: "fail", next: "REPAIR_MAST" }
         ]
       },
-      "3": {
-        title: "Test Step 3: Inspect Coaxial Cables (External & Internal Cabinet)",
-        text: "A. Inspect coax cables from both antennas to the cabinet bulkhead connectors (YH-C2 RH / YG-C2 LH).\nB. Inspect internal cabinet coax jumpers to PCS Ports A1 and A2.",
-        expected: "Coax cables are free of kinks, chafing, or loose connectors.",
+      "REPAIR_ANTENNA": { terminal: true, title: "Replace GNSS Antenna", text: "Replace antenna (P/N 386-7311) and run GAMS + Perception Cal per REHS8845." },
+      "REPAIR_MAST": { terminal: true, title: "Repair Mast & Run GAMS", text: "Align/repair antenna mast. Run GAMS calibration in WebOCS." },
+      "REPAIR_GAMS": { terminal: true, title: "Run GAMS Calibration", text: "In WebOCS -> GAMS Calibration, run calibration until complete." }
+    }
+  },
+
+  "E1252": {
+    code: "E1252",
+    priority: 3,
+    title: "Low Machine Position Accuracy",
+    mid: "MID 039 (MCM)",
+    sys: "MCM",
+    action: "Controlled Stop",
+    desc: "AMT not receiving accurate GPS position from PCS. Check E1480 first.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Restart System & Check Sky View",
+        text: "Ensure truck is away from highwalls/shelters. Key OFF AMT, wait for mode lights to turn OFF, then Key ON and wait 5 minutes.",
+        expected: "E1252 clears.",
         options: [
-          { label: "OK — Coax cables and connectors are good", type: "pass", next: "REPAIR_GAMS" },
-          { label: "NOT OK — Coax damaged or loose", type: "fail", next: "REPAIR_COAX" }
+          { label: "OK — E1252 cleared", type: "pass", next: "TERM_RESOLVED" },
+          { label: "NOT OK — E1252 remains active", type: "fail", next: "2" }
         ]
       },
-      "REPAIR_ANTENNA": { terminal: true, title: "Replace GNSS Antenna (P/N 386-7311)", text: "Replace the damaged GNSS antenna, torque properly, and
+      "2": {
+        title: "Test Step 2: Check Front IMU & DMI Speed Signal",
+        text: "Verify front IMU bracket is tight. In WebOCS -> Positioning Tab, verify DMI Speed matches Transmission Output Speed (TOS) while moving.",
+        expected: "DMI speed matches TOS.",
+        options: [
+          { label: "OK — DMI speed matches TOS", type: "pass", next: "TERM_RESOLVED" },
+          { label: "NOT OK — DMI signal missing or erratic", type: "fail", next: "REPAIR_DMI" }
+        ]
+      },
+      "TERM_RESOLVED": { terminal: true, title: "Resolved", text: "Drive in manual mode to verify E1252 does not return." },
+      "REPAIR_DMI": { terminal: true, title: "Troubleshoot DMI / TOS (CID 0084)", text: "Check TOS Sensor #2 on rear axle and DMI Filter (388-7064) in autonomy cabinet." }
+    }
+  },
+
+  "E1153": {
+    code: "E1153",
+    priority: 2,
+    title: "Autonomous Steering Enable Valve Not Responding to Command",
+    mid: "MID 039 (MCM)",
+    sys: "MCM",
+    action: "Stop Machine Safely",
+    desc: "Mismatch between commanded mode and Steering Enable Valve Position Sensor.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Check 8V Power at Sensor",
+        text: "Disconnect 3-pin connector from Selector/Diverter Valve Spool Position Sensor. Measure voltage between Pin A (C985-PK) and Pin B (C988-BK).",
+        expected: "8.0 ± 0.5 VDC.",
+        options: [
+          { label: "OK — ~8.0 VDC present", type: "pass", next: "2" },
+          { label: "NOT OK — Missing voltage", type: "fail", next: "REPAIR_8V" }
+        ]
+      },
+      "2": {
+        title: "Test Step 2: Check Sensor Signal Voltage",
+        text: "Reconnect sensor. Back-probe Pin B (Ground) and Pin C (Signal U736-YL, I/O J1-36).",
+        expected: "Manual: 2.3-2.8V | Auto: 3.6-4.1V.",
+        options: [
+          { label: "OK — Voltage within spec", type: "pass", next: "TERM_VALVE" },
+          { label: "NOT OK — Out of spec", type: "fail", next: "REPAIR_SENSOR" }
+        ]
+      },
+      "REPAIR_8V": { terminal: true, title: "Repair 8V Supply Wire", text: "Repair C985-PK or C988-BK harness wires to I/O Module J1." },
+      "REPAIR_SENSOR": { terminal: true, title: "Replace Position Sensor", text: "Replace steering diverter valve position sensor." },
+      "TERM_VALVE": { terminal: true, title: "Check Hydraulic Pilot Pressure", text: "Verify primary steering pilot pressure and replace steering selector valve if spool is sticking." }
+    }
+  },
+
+  "E1374": {
+    code: "E1374",
+    priority: 1,
+    title: "Steering Valve Spool Not Responding to Command",
+    mid: "MID 150 (Steering)",
+    sys: "STEER",
+    action: "Immediate Safe Shutdown",
+    desc: "EH Steering Control Valve directional spool did not move in commanded direction.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Run Steering Service Mode Test in Cat ET",
+        text: "Monitor spool position in Cat ET. Does spool shift ±7 mm during command? Does fault occur in one direction or both?",
+        expected: "Determine failure mode.",
+        options: [
+          { label: "Occurs in ONE direction only", type: "fail", next: "REPAIR_SOLENOID" },
+          { label: "Occurs in BOTH directions (No steering)", type: "fail", next: "REPAIR_VALVE_STUCK" }
+        ]
+      },
+      "REPAIR_SOLENOID": { terminal: true, title: "Replace Primary Proportional Solenoid", text: "Swap primary solenoids to confirm, then replace the failed proportional solenoid and recalibrate." },
+      "REPAIR_VALVE_STUCK": { terminal: true, title: "Inspect Valve for Contamination / Replace Valve", text: "Main steering spool is stuck with contamination. Remove valve for inspection and clean/replace." }
+    }
+  },
+
+  "E526": {
+    code: "E526 (3)",
+    priority: 1,
+    title: "Brake Pump Pressure Not Responding to Command",
+    mid: "MID 116 (Brake)",
+    sys: "BRAKE",
+    action: "Immediate Safe Shutdown",
+    desc: "Brake system commanding charge, but pump pressure is < 2,100 kPa (305 psi) for > 0.5s.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Install Mechanical Gauge & Check Unloader",
+        text: "Install 35,000 kPa gauge on brake pump pressure tap. Monitor pressure rise when unloader status changes. Inspect unloader solenoid screen for debris.",
+        expected: "Pump builds pressure to 20,700 kPa (3,000 psi).",
+        options: [
+          { label: "Gauge builds pressure normally (Sensor faulty)", type: "pass", next: "REPAIR_SENSOR" },
+          { label: "Pump pressure stays at standby / unloader stuck", type: "fail", next: "REPAIR_PUMP" }
+        ]
+      },
+      "REPAIR_SENSOR": { terminal: true, title: "Replace Brake Pump Pressure Sensor", text: "Replace Brake Pump Pressure Sensor (CID 1962, J2-32)." },
+      "REPAIR_PUMP": { terminal: true, title: "Replace Unloader Solenoid / Brake Pump", text: "Clean/replace unloader valve and screen. Kidney loop oil if contaminated. If pump failed, replace pump." }
+    }
+  },
+
+  "E398_E1106": {
+    code: "E398 / E1106",
+    priority: 1,
+    title: "C175 Low Fuel Rail Pressure / High Pump Flow",
+    mid: "MID 036 (Engine)",
+    sys: "ENG",
+    action: "Level 2 Derate",
+    desc: "Common rail fuel pressure lower than commanded or HPFP flow excessive.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Check Low-Pressure Fuel Transfer Pressure",
+        text: "In Cat ET, monitor 'Fuel Pressure (abs)' minus 'Atmospheric Pressure' at Low Idle and High Idle.",
+        expected: "Low Idle: > 250 kPa (36 psi) | High Idle: > 450 kPa (65 psi).",
+        options: [
+          { label: "OK — Low pressure is within spec", type: "pass", next: "REPAIR_HPFP" },
+          { label: "NOT OK — Low pressure is low", type: "fail", next: "REPAIR_LOW_FUEL" }
+        ]
+      },
+      "REPAIR_LOW_FUEL": { terminal: true, title: "Replace Fuel Filters & Check Transfer Pump", text: "Replace primary/secondary fuel filters and verify fuel transfer pump pressure." },
+      "REPAIR_HPFP": { terminal: true, title: "Check HPFP Relief Valve Temp & Replace Pump", text: "Check temp differential across HPFP valve block vs pump head. If >20°C, replace in-line high-pressure filter element and HPFP." }
+    }
+  }
+};
+
+let currentFaultKey = "E1480";
+let stepHistory = ["1"];
+let activeQueue = ["E1480", "E1252"];
+
+function switchTab(tabId, event) {
+  if(event) event.preventDefault();
+  ['diag', 'cal', 'esr', 'fire', 'net'].forEach(t => {
+    document.getElementById('tab-' + t).classList.add('hidden');
+  });
+  document.getElementById('tab-' + tabId).classList.remove('hidden');
+  const map = ['diag', 'cal', 'esr', 'fire', 'net'];
+  document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+    btn.classList.toggle('active', map[idx] === tabId);
+  });
+}
+
+function toggleQueue(key, event) {
+  if(event) event.stopPropagation();
+  const idx = activeQueue.indexOf(key);
+  if (idx > -1) {
+    activeQueue.splice(idx, 1);
+  } else {
+    activeQueue.push(key);
+  }
+  renderQueue();
+  renderPills();
+}
+
+function clearQueue() {
+  activeQueue = [];
+  renderQueue();
+  renderPills();
+}
+
+function renderQueue() {
+  const container = document.getElementById('queueContainer');
+  const alertBox = document.getElementById('priorityAlert');
+  if(!container) return;
+  container.innerHTML = '';
+
+  if (activeQueue.length === 0) {
+    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">No codes queued. Click [+] on any fault button below to build a triage list.</span>`;
+    if(alertBox) alertBox.classList.add('hidden');
+    return;
+  }
+
+  const sorted = [...activeQueue].sort((a, b) => (faultDB[a].priority || 5) - (faultDB[b].priority || 5));
+
+  sorted.forEach((key, index) => {
+    const f = faultDB[key];
+    if(!f) return;
+    const chip = document.createElement('div');
+    chip.className = 'queue-chip' + (key === currentFaultKey ? ' active-chip' : '');
+    chip.innerHTML = `<span>#${index + 1} <strong>${f.code}</strong></span> <span onclick="toggleQueue('${key}', event)">✕</span>`;
+    chip.onclick = () => loadFault(key);
+    container.appendChild(chip);
+  });
+
+  if (activeQueue.includes("E1480") && activeQueue.includes("E1252")) {
+    if(alertBox) {
+      alertBox.classList.remove('hidden');
+      alertBox.innerHTML = `⚠️ <strong>SIS Priority Rule:</strong> <code>E1480</code> causes <code>E1252</code>. Troubleshoot <strong>E1480 first</strong>!`;
+    }
+  } else {
+    if(alertBox) alertBox.classList.add('hidden');
+  }
+}
+
+function renderPills() {
+  const container = document.getElementById('pillContainer');
+  const searchInput = document.getElementById('searchInput');
+  const sysFilter = document.getElementById('sysFilter');
+  if(!container || !searchInput || !sysFilter) return;
+
+  const query = searchInput.value.toLowerCase();
+  const sys = sysFilter.value;
+  container.innerHTML = '';
+
+  Object.keys(faultDB).forEach(key => {
+    const item = faultDB[key];
+    const matchSys = (sys === 'ALL' || item.sys === sys);
+    const matchQuery = item.code.toLowerCase().includes(query) || item.title.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query);
+    if (matchSys && matchQuery) {
+      const inQueue = activeQueue.includes(key);
+      const btn = document.createElement('div');
+      btn.className = 'pill' + (key === currentFaultKey ? ' active' : '');
+      btn.innerHTML = `
+        <span style="flex:1; cursor:pointer;" onclick="loadFault('${key}')"><strong>${item.code}</strong>: ${item.title.substring(0, 28)}...</span>
+        <span class="pill-add" onclick="toggleQueue('${key}', event)">${inQueue ? '✓' : '+'}</span>
+      `;
+      container.appendChild(btn);
+    }
+  });
+}
+
+function loadFault(key) {
+  if(!faultDB[key]) return;
+  currentFaultKey = key;
+  stepHistory = ["1"];
+  renderQueue();
+  renderPills();
+  renderStep("1");
+}
+
+function renderStep(stepId) {
+  const fault = faultDB[currentFaultKey];
+  if(!fault) return;
+  const step = fault.steps[stepId];
+  const container = document.getElementById('wizardContainer');
+  if(!container) return;
+
+  let html = `
+    <div class="wizard-card">
+      <div class="fault-header">
+        <div class="fault-meta">
+          <span class="badge badge-mid">${fault.mid}</span>
+          <span class="badge badge-action">${fault.action}</span>
+        </div>
+        <h2>${fault.code} — ${fault.title}</h2>
+        <p style="color:var(--text-muted); margin-top:4px; font-size:0.9rem;">${fault.desc}</p>
+      </div>
+  `;
+
+  if (step.terminal) {
+    html += `
+      <div class="repair-box">
+        <h3>🔧 Action / Resolution: ${step.title}</h3>
+        <p>${step.text}</p>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="step-box">
+        <div class="step-title">${step.title}</div>
+        <div class="step-instructions">${step.text}</div>
+        <div class="expected-box">
+          <strong>Expected Result:</strong> ${step.expected}
+        </div>
+        <div class="decision-btns">
+          ${step.options.map(opt => `
+            <button class="btn-choice ${opt.type === 'pass' ? 'btn-pass' : 'btn-fail'}" onclick="nextStep('${opt.next}')">
+              <span>${opt.label}</span>
+              <span>➔</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  html += `
+      <div class="history-trail">
+        <span style="color:var(--text-muted); font-size:0.8rem;">Step Trail: ${stepHistory.join(' ➔ ')}</span>
+        <div style="display:flex; gap:8px;">
+          ${stepHistory.length > 1 ? `<button class="btn-util" onclick="goBack()">⬅ Back</button>` : ''}
+          <button class="btn-util" onclick="loadFault('${currentFaultKey}')">🔄 Restart</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function nextStep(nextId) {
+  stepHistory.push(nextId);
+  renderStep(nextId);
+}
+
+function goBack() {
+  if (stepHistory.length > 1) {
+    stepHistory.pop();
+    renderStep(stepHistory[stepHistory.length - 1]);
+  }
+}
+
+// Initialize on DOM load
+window.addEventListener('DOMContentLoaded', () => {
+  renderQueue();
+  renderPills();
+  loadFault("E1480");
+});
+</script>
+</body>
+</html>
