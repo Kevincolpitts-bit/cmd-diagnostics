@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#ffcc00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>793F CMD Field Diagnostic PWA</title>
+  <style>
+    :root {
+      --bg-dark: #0b0f14;
+      --card-bg: #151c24;
+      --card-border: #263240;
+      --cat-yellow: #ffcc00;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --pass-green: #238636;
+      --fail-red: #da3633;
+      --warn-orange: #d29922;
+      --info-blue: #1f6feb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.5; padding-bottom: 80px; }
+
+    /* App Bar */
+    header {
+      background: #10161d;
+      border-bottom: 3px solid var(--cat-yellow);
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-badge {
+      background: var(--cat-yellow);
+      color: #000;
+      font-weight: 900;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      letter-spacing: 0.8px;
+    }
+    .brand h1 { font-size: 1.1rem; font-weight: 800; }
+    .status-bar { display: flex; align-items: center; gap: 8px; }
+    .offline-pill {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(35, 134, 54, 0.25);
+      border: 1px solid var(--pass-green);
+      color: #7ee787;
+      font-weight: 700;
+    }
+    #installBtn {
+      background: var(--cat-yellow);
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: none;
+    }
+
+    /* Bottom / Top Navigation */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 10px 16px;
+      background: #10161d;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: var(--cat-yellow);
+      color: #000;
+      border-color: var(--cat-yellow);
+      font-weight: 800;
+    }
+
+    .container { max-width: 1040px; margin: 16px auto; padding: 0 12px; }
+
+    /* Multi-Code Triage Banner */
+    .queue-banner {
+      background: #1a222d;
+      border: 1px solid #384656;
+      border-left: 4px solid var(--warn-orange);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .queue-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .queue-title { font-size: 0.9rem; font-weight: 700; color: var(--cat-yellow); }
+    .queue-items { display: flex; flex-wrap: wrap; gap: 8px; }
+    .queue-chip {
+      background: #0d1117;
+      border: 1px solid var(--cat-yellow);
+      color: var(--text-main);
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .queue-chip.active-chip { background: var(--cat-yellow); color: #000; font-weight: 800; }
+    .priority-alert {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(210, 153, 34, 0.15);
+      border: 1px solid var(--warn-orange);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #f2cc60;
+    }
+
+    /* Search & Filter */
+    .search-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .search-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      background: #0b0f14;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    .search-input:focus { outline: 2px solid var(--cat-yellow); }
+    .sys-select {
+      background: #0b0f14;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .code-pills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 170px; overflow-y: auto; padding-right: 4px; }
+    .pill {
+      background: #1f2935;
+      border: 1px solid #334152;
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill.active { background: var(--cat-yellow); color: #000; font-weight: 800; border-color: var(--cat-yellow); }
+    .pill-add {
+      background: rgba(255,255,255,0.12);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+
+    /* Wizard Card */
+    .wizard-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .fault-header { border-bottom: 1px solid var(--card-border); padding-bottom: 14px; margin-bottom: 16px; }
+    .fault-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 800; }
+    .badge-mid { background: var(--info-blue); color: #fff; }
+    .badge-action { background: var(--fail-red); color: #fff; }
+
+    .step-box {
+      background: #0e1319;
+      border-left: 4px solid var(--cat-yellow);
+      padding: 18px;
+      border-radius: 6px;
+    }
+    .step-title { font-size: 1.1rem; font-weight: 800; color: var(--cat-yellow); margin-bottom: 10px; }
+    .step-instructions { margin-bottom: 16px; white-space: pre-line; font-size: 0.95rem; }
+    .expected-box {
+      background: rgba(31, 111, 235, 0.14);
+      border: 1px solid rgba(31, 111, 235, 0.45);
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .expected-box strong { color: #58a6ff; }
+
+    .decision-btns { display: flex; flex-direction: column; gap: 10px; }
+    .btn-choice {
+      padding: 14px 16px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-pass { background: rgba(35, 134, 54, 0.22); border-color: var(--pass-green); color: #7ee787; }
+    .btn-pass:active, .btn-pass:hover { background: var(--pass-green); color: #fff; }
+    .btn-fail { background: rgba(218, 54, 51, 0.22); border-color: var(--fail-red); color: #ffa198; }
+    .btn-fail:active, .btn-fail:hover { background: var(--fail-red); color: #fff; }
+
+    .repair-box {
+      background: rgba(255, 204, 0, 0.1);
+      border: 2px solid var(--cat-yellow);
+      padding: 18px;
+      border-radius: 8px;
+    }
+    .repair-box h3 { color: var(--cat-yellow); margin-bottom: 8px; }
+
+    .history-trail {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn-util {
+      background: #21262d;
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.85rem; }
+    th, td { border: 1px solid var(--card-border); padding: 9px 10px; text-align: left; }
+    th { background: #10161d; color: var(--cat-yellow); }
+    tr:nth-child(even) { background: #121820; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-badge">793F CMD</span>
+    <h1>AMS Field Diagnostic PWA</h1>
+  </div>
+  <div class="status-bar">
+    <span class="offline-pill" id="netStatus">✓ OFFLINE READY</span>
+    <button id="installBtn" onclick="installPWA()">⬇ Install App</button>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <button class="tab-btn active" onclick="switchTab('diag')">🔧 Interactive Diagnostics</button>
+  <button class="tab-btn" onclick="switchTab('cal')">🎯 Calibration Matrix</button>
+  <button class="tab-btn" onclick="switchTab('esr')">📡 ESR 2.5 Radar Mod</button>
+  <button class="tab-btn" onclick="switchTab('fire')">🔥 LOP Fire Supp</button>
+  <button class="tab-btn" onclick="switchTab('net')">🌐 IP & Fuse Directory</button>
+</div>
+
+<div class="container">
+
+  <!-- TAB 1: DIAGNOSTICS -->
+  <div id="tab-diag">
+    <!-- Multi-Code Active Triage Queue -->
+    <div class="queue-banner" id="queueBanner">
+      <div class="queue-header">
+        <span class="queue-title">📋 Active Truck Fault Queue (Click [+] on any code below to triage multiple faults)</span>
+        <button class="btn-util" style="padding:4px 8px; font-size:0.75rem;" onclick="clearQueue()">Clear Queue</button>
+      </div>
+      <div class="queue-items" id="queueContainer"></div>
+      <div id="priorityAlert" class="priority-alert hidden"></div>
+    </div>
+
+    <div class="search-panel">
+      <div class="search-row">
+        <input type="text" id="searchInput" class="search-input" placeholder="Enter Code or Symptom (e.g. E1153, E1252, E1374, E526, E398, 0838, LiDAR, Fan)..." oninput="renderPills()">
+        <select id="sysFilter" class="sys-select" onchange="renderPills()">
+          <option value="ALL">All Systems</option>
+          <option value="MCM">Autonomy / MCM (MID 039)</option>
+          <option value="STEER">Steering (MID 150)</option>
+          <option value="BRAKE">Braking (MID 116)</option>
+          <option value="VIMS">VIMS / Payload (MID 161/162)</option>
+          <option value="ENG">C175 Engine (MID 036)</option>
+        </select>
+      </div>
+      <div class="code-pills" id="pillContainer"></div>
+    </div>
+
+    <div id="wizardContainer"></div>
+  </div>
+
+  <!-- TAB 2: CALIBRATION MATRIX -->
+  <div id="tab-cal" class="hidden">
+    <div class="wizard-card">
+      <h2>Maintenance Triggered Calibrations (SEBU8751 / REHS8845)</h2>
+      <p style="color:var(--text-muted); margin-bottom:12px;">Select the component you replaced or adjusted to see required calibrations before returning to Autonomous Production:</p>
+      <table>
+        <thead>
+          <tr><th>Component Replaced / Adjusted</th><th>Cat ET Calibration</th><th>WebOCS / Autonomy Calibration</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Steering Cylinder / Tie Rod / Alignment</strong></td><td>Steering Cylinder Position Sensors Cal + Trim Data Upload + Solenoid Cal (UENR2227)</td><td>Planning Checkout (Straight Ahead + Steering/Tracking Test)</td></tr>
+          <tr><td><strong>Primary Steering ECM / EH Steering Valve / Solenoids</strong></td><td>Arm Steering System / Solenoid Calibration (Steering Oil Hot)</td><td>Planning Checkout (Straight Ahead + Steering Test)</td></tr>
+          <tr><td><strong>Brake Solenoids / Brake Relay Valve / Brake ECM</strong></td><td>Brake Solenoid Calibration (UENR2210 - Brake Oil Hot)</td><td>Planning Checkout (Braking Test) or Perception Verification</td></tr>
+          <tr><td><strong>Suspension Cylinder (Charged/Adjusted)</strong></td><td>VIMS Payload Calibration (PAYCAL)</td><td>Check Radar/LiDAR Alignment; if adjusted, run Perception Cal + Planning Checkout</td></tr>
+          <tr><td><strong>LiDAR (#1) or LiDAR Mounting Bracket</strong></td><td>N/A</td><td>Mechanical Check/Adjust (SEBU8751) ➔ Perception Calibration ➔ Perception Verification</td></tr>
+          <tr><td><strong>Front Radar (#2-#7) or Radar Box</strong></td><td>N/A</td><td>Mechanical Alignment ➔ Perception Calibration ➔ Perception Verification</td></tr>
+          <tr><td><strong>GNSS Antenna / Mast / Front IMU</strong></td><td>N/A</td><td>GAMS Calibration ➔ Positioning Checkout ➔ Perception Calibration ➔ Perception Verification</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 3: ESR 2.5 RADAR MOD -->
+  <div id="tab-esr" class="hidden">
+    <div class="wizard-card">
+      <h2>ESR 1.0 to ESR 2.5 Radar Upgrade & Emergency Harness Mod</h2>
+      <div class="step-box" style="margin-top:12px;">
+        <div class="step-title">Emergency Tail Harness Repin (When P/N 617-3216 is Out of Stock)</div>
+        <p class="step-instructions">1. Move <strong>PIN 3 (Black 212 - Ground)</strong> to <strong>PIN 4</strong> on the radar connector.
+2. De-Pin <strong>PIN 1 (Yellow 166 - +12V Unswitched Battery)</strong> and heat-shrink/tape it back to the harness (ESR 2.5 only uses switched 12V on Pin 10).
+3. Install blanking plugs into unused cavities.
+4. Notch the radar mounting bracket (P/N 511-9464) per M0164397 to clear the outer case ribs on the ESR 2.5 radar.</p>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Pin #</th><th>ESR 1.0 (338-5298)</th><th>Wire ID</th><th>ESR 2.5 (611-3137)</th><th>Mod Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Battery +12V</td><td>166-YL-18</td><td>NC</td><td>De-pin & heat shrink back</td></tr>
+          <tr><td>3</td><td>Ground</td><td>212-BK-18</td><td>NC</td><td>Move 212-BK to Pin 4</td></tr>
+          <tr><td>4</td><td>RxN</td><td>—</td><td><strong>Ground</strong></td><td>Insert 212-BK from Pin 3</td></tr>
+          <tr><td>9</td><td>PCAN Low (CAN-)</td><td>F714-GN-18</td><td><strong>PCAN Low (CAN-)</strong></td><td>Leave in Pin 9</td></tr>
+          <tr><td>10</td><td>Keyswitch +12V</td><td>161-PK-18</td><td><strong>Keyswitch +12V</strong></td><td>Leave in Pin 10</td></tr>
+          <tr><td>18</td><td>PCAN High (CAN+)</td><td>F713-YL-18</td><td><strong>PCAN High (CAN+)</strong></td><td>Leave in Pin 18</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 4: LOP FIRE SUPPRESSION -->
+  <div id="tab-fire" class="hidden">
+    <div class="wizard-card">
+      <h2>CMD Fire Suppression Re-Work (Loss of Pressure System)</h2>
+      <p style="color:var(--text-muted); margin-bottom:12px;">Failsafe Relay (24VDC WesTrac 3E-5239) + 1050 kPa Pressure Switch (SAP 3064657)</p>
+      <table>
+        <thead>
+          <tr><th>I/O J2-31 (931-GY N/O)</th><th>I/O J2-36 (932-GN N/C)</th><th>State</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Open</td><td>Ground</td><td><strong>Normal</strong></td><td>System >1050 kPa, Relay energized (24V on Pin 85)</td></tr>
+          <tr><td>Ground</td><td>Open</td><td><strong>Activated (E1286)</strong></td><td>System <1050 kPa or discharged, Relay de-energized</td></tr>
+          <tr><td>Open</td><td>Open</td><td><strong>Fault (FMI 03)</strong></td><td>Open circuit / both wires open</td></tr>
+          <tr><td>Ground</td><td>Ground</td><td><strong>Fault (FMI 04)</strong></td><td>Shorted circuit / both wires grounded</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 5: IP & FUSE DIRECTORY -->
+  <div id="tab-net" class="hidden">
+    <div class="wizard-card">
+      <h2>Onboard IP Addresses & Command Cabinet Fuses</h2>
+      <table>
+        <thead>
+          <tr><th>Component / Web Interface</th><th>IP Address / URL</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>WebOCS Launcher (A6 ECM)</td><td><code>http://165.26.79.7:8000</code></td><td>Connect via Cab/Bumper RJ45</td></tr>
+          <tr><td>WebOCS Launcher (A5 ECM)</td><td><code>http://165.26.79.13:8000</code></td><td>5-ECM Cabinet</td></tr>
+          <tr><td>A6 Internal Switch (Auto ECM 1 / 2)</td><td><code>165.26.79.3</code> / <code>165.26.79.2</code></td><td>Login: <code>monitor</code> (no password)</td></tr>
+          <tr><td>PCS (Positioning Module)</td><td><code>165.26.79.6</code></td><td>Powered via PM400 (24V Fuse F10 - 15A)</td></tr>
+          <tr><td>LiDAR Sensor #1</td><td><code>192.168.3.043</code></td><td>24V Fuse F16 (15A) | PPS Buffer: 12V Fuse F6 (10A)</td></tr>
+          <tr><td>A-Stop Receivers (LH / RH)</td><td>CAN 1 (LH) / CAN 2 (RH)</td><td>12V Fuse Box: F7 (10A LH) & F8 (10A RH)</td></tr>
+          <tr><td>Front Radars</td><td>CAN Per Radar</td><td>12V Fuse Box: F1 (Keyswitch), F11 (LH/MID), F12 (RH)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Register Service Worker for Offline PWA Support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+// Handle PWA Install Prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('installBtn').style.display = 'none';
+    });
+  }
+}
+
+// EXPANDED SIS DIAGNOSTIC DATABASE
+const faultDB = {
+  "E1480": {
+    code: "E1480",
+    priority: 1,
+    triggers: ["E1252"],
+    title: "GPS Receiver Antenna Separation Distance Out of Range",
+    mid: "MID 039 (MCM)",
+    sys: "MCM",
+    action: "Action Code 4: Controlled Stop",
+    desc: "Reported distance between Primary (LH) and Secondary (RH) GNSS antennas is out of spec (Target: 2.0m ± 0.05m on 793F). ALWAYS resolve E1480 before E1252.",
+    steps: {
+      "1": {
+        title: "Test Step 1: Inspect Primary & Secondary GNSS Antennas",
+        text: "Inspect both GNSS antenna enclosures on the front mast for cracks, water ingress, or loose mounting bolts.",
+        expected: "Both antennas are intact and tightly mounted.",
+        options: [
+          { label: "OK — Antennas are undamaged and tight", type: "pass", next: "2" },
+          { label: "NOT OK — Antenna cracked or loose", type: "fail", next: "REPAIR_ANTENNA" }
+        ]
+      },
+      "2": {
+        title: "Test Step 2: Inspect Antenna Mast Structure & Alignment",
+        text: "Inspect both GNSS masts and the horizontal cross-beam for cracks, bends, or loose mounting hardware. Verify baseline separation in WebOCS GAMS tab (2.000m ± 0.05m).",
+        expected: "Masts are straight, rigid, and within 50mm tolerance.",
+        options: [
+          { label: "OK — Masts are straight and secure", type: "pass", next: "3" },
+          { label: "NOT OK — Mast bent, cracked, or out of alignment", type: "fail", next: "REPAIR_MAST" }
+        ]
+      },
+      "3": {
+        title: "Test Step 3: Inspect Coaxial Cables (External & Internal Cabinet)",
+        text: "A. Inspect coax cables from both antennas to the cabinet bulkhead connectors (YH-C2 RH / YG-C2 LH).\nB. Inspect internal cabinet coax jumpers to PCS Ports A1 and A2.",
+        expected: "Coax cables are free of kinks, chafing, or loose connectors.",
+        options: [
+          { label: "OK — Coax cables and connectors are good", type: "pass", next: "REPAIR_GAMS" },
+          { label: "NOT OK — Coax damaged or loose", type: "fail", next: "REPAIR_COAX" }
+        ]
+      },
+      "REPAIR_ANTENNA": { terminal: true, title: "Replace GNSS Antenna (P/N 386-7311)", text: "Replace the damaged GNSS antenna, torque properly, and
