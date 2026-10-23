@@ -1,0 +1,18 @@
+{
+  "name": "793F CMD Field Diagnostic Wizard",
+  "short_name": "CMD Diag",
+  "description": "Offline Interactive Troubleshooting & Rework Guide for Cat 793F CMD Autonomous Haul Trucks",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#ffcc00",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23ffcc00'/><text x='50' y='65' font-family='Arial,sans-serif' font-size='44' font-weight='900' text-anchor='middle' fill='%23000'>CMD</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
