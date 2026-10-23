@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
-  <title>793F CMD Field Diagnostic PWA</title>
+  <title>793F CMD Master Field Diagnostic PWA</title>
   <style>
     :root {
       --bg-dark: #0b0f14;
@@ -139,18 +139,36 @@
       padding: 16px;
       margin-bottom: 16px;
     }
-    .search-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    .search-input {
+    .search-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .search-wrapper {
       flex: 1;
       min-width: 200px;
+      display: flex;
       background: #0b0f14;
       border: 1px solid var(--card-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .search-wrapper:focus-within { outline: 2px solid var(--cat-yellow); }
+    .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
       color: var(--text-main);
       padding: 12px;
-      border-radius: 6px;
       font-size: 0.95rem;
     }
-    .search-input:focus { outline: 2px solid var(--cat-yellow); }
+    .search-input:focus { outline: none; }
+    .search-action-btn {
+      background: #21262d;
+      color: var(--text-main);
+      border: none;
+      padding: 0 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border-left: 1px solid var(--card-border);
+    }
+    .search-action-btn:active { background: var(--cat-yellow); color: #000; }
     .sys-select {
       background: #0b0f14;
       border: 1px solid var(--card-border);
@@ -160,7 +178,7 @@
       font-size: 0.95rem;
     }
 
-    .code-pills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px; }
+    .code-pills { display: flex; flex-wrap: wrap; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
     .pill {
       background: #1f2935;
       border: 1px solid #334152;
@@ -273,7 +291,7 @@
 <header>
   <div class="brand">
     <span class="brand-badge">793F CMD</span>
-    <h1>AMS Field Diagnostic PWA</h1>
+    <h1>AMS Master Diagnostic PWA</h1>
   </div>
   <div class="status-bar">
     <span class="offline-pill" id="netStatus">✓ OFFLINE READY</span>
@@ -304,7 +322,11 @@
 
     <div class="search-panel">
       <div class="search-row">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search Code or Symptom (e.g. E1153, E1252, E1374, E526, E398)..." oninput="renderPills()">
+        <div class="search-wrapper">
+          <input type="text" id="searchInput" class="search-input" placeholder="Search Code, Symptom or System (e.g. E1252, E1374, steering, brakes)..." oninput="renderPills()" onkeydown="if(event.key==='Enter') { renderPills(); blur(); }">
+          <button class="search-action-btn" onclick="renderPills(); document.getElementById('searchInput').blur();">🔍 Search</button>
+          <button class="search-action-btn" onclick="document.getElementById('searchInput').value=''; renderPills();" style="background:#30363d;" title="Clear Search">✕</button>
+        </div>
         <select id="sysFilter" class="sys-select" onchange="renderPills()">
           <option value="ALL">All Systems</option>
           <option value="MCM">Autonomy / MCM (MID 039)</option>
@@ -420,171 +442,243 @@ function installPWA() {
   }
 }
 
+// MASTER FAULT DATABASE: ALL AUTONOMY, STEERING, BRAKES, VIMS, ENGINE CODES
 const faultDB = {
+  // AUTONOMY / MCM
   "E1480": {
-    code: "E1480",
-    priority: 1,
+    code: "E1480", priority: 1, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine Safely",
     title: "GPS Receiver Antenna Separation Distance Out of Range",
-    mid: "MID 039 (MCM)",
-    sys: "MCM",
-    action: "Stop Machine Safely",
     desc: "Reported distance between primary and secondary GNSS antennas is out of spec. Resolve E1480 before E1252.",
     steps: {
-      "1": {
-        title: "Test Step 1: Inspect Primary & Secondary GNSS Antennas",
-        text: "Inspect both GNSS antenna enclosures on the front mast for cracks, water ingress, or loose mounting bolts.",
-        expected: "Both antennas are intact and tightly mounted.",
-        options: [
-          { label: "OK — Antennas intact and tight", type: "pass", next: "2" },
-          { label: "NOT OK — Antenna cracked or loose", type: "fail", next: "REPAIR_ANTENNA" }
-        ]
-      },
-      "2": {
-        title: "Test Step 2: Inspect Antenna Mast & Verify Baseline",
-        text: "Verify baseline separation in WebOCS GAMS tab (2.000m ± 0.05m). Inspect mast for bends or loose hardware.",
-        expected: "Masts are rigid and baseline is correct.",
-        options: [
-          { label: "OK — Mast secure & baseline good", type: "pass", next: "REPAIR_GAMS" },
-          { label: "NOT OK — Mast bent or loose", type: "fail", next: "REPAIR_MAST" }
-        ]
-      },
-      "REPAIR_ANTENNA": { terminal: true, title: "Replace GNSS Antenna", text: "Replace antenna (P/N 386-7311) and run GAMS + Perception Cal per REHS8845." },
-      "REPAIR_MAST": { terminal: true, title: "Repair Mast & Run GAMS", text: "Align/repair antenna mast. Run GAMS calibration in WebOCS." },
-      "REPAIR_GAMS": { terminal: true, title: "Run GAMS Calibration", text: "In WebOCS -> GAMS Calibration, run calibration until complete." }
+      "1": { title: "Test Step 1: Inspect GNSS Antennas & Masts", text: "Inspect both GNSS antenna enclosures and masts on front of truck for damage or looseness.", expected: "Antennas and masts are tight and secure.", options: [{label: "OK — Secure", type: "pass", next: "2"}, {label: "NOT OK — Damaged/Loose", type: "fail", next: "REPAIR_ANT"}] },
+      "2": { title: "Test Step 2: Check Coaxial Cables & GAMS", text: "Inspect coax cables from antennas to cabinet bulkhead and verify GAMS baseline in WebOCS.", expected: "Baseline separation is ~2.00m ± 0.05m.", options: [{label: "OK — Baseline correct", type: "pass", next: "TERM_GAMS"}, {label: "NOT OK — Coax damaged", type: "fail", next: "REPAIR_COAX"}] },
+      "REPAIR_ANT": { terminal: true, title: "Replace Antenna / Mast", text: "Replace damaged antenna (386-7311) or mast and run GAMS + Perception Cal per REHS8845." },
+      "REPAIR_COAX": { terminal: true, title: "Replace Coax Cable", text: "Replace damaged coaxial cable and check bulkhead connections." },
+      "TERM_GAMS": { terminal: true, title: "Run GAMS Calibration", text: "Run GAMS Calibration in WebOCS Positioning Checkout tab until complete." }
     }
   },
-
   "E1252": {
-    code: "E1252",
-    priority: 3,
+    code: "E1252", priority: 3, sys: "MCM", mid: "MID 039 (MCM)", action: "Controlled Stop",
     title: "Low Machine Position Accuracy",
-    mid: "MID 039 (MCM)",
-    sys: "MCM",
-    action: "Controlled Stop",
     desc: "AMT not receiving accurate GPS position from PCS. Check E1480 first.",
     steps: {
-      "1": {
-        title: "Test Step 1: Restart System & Check Sky View",
-        text: "Ensure truck is away from highwalls/shelters. Key OFF AMT, wait for mode lights to turn OFF, then Key ON and wait 5 minutes.",
-        expected: "E1252 clears.",
-        options: [
-          { label: "OK — E1252 cleared", type: "pass", next: "TERM_RESOLVED" },
-          { label: "NOT OK — E1252 remains active", type: "fail", next: "2" }
-        ]
-      },
-      "2": {
-        title: "Test Step 2: Check Front IMU & DMI Speed Signal",
-        text: "Verify front IMU bracket is tight. In WebOCS -> Positioning Tab, verify DMI Speed matches Transmission Output Speed (TOS) while moving.",
-        expected: "DMI speed matches TOS.",
-        options: [
-          { label: "OK — DMI speed matches TOS", type: "pass", next: "TERM_RESOLVED" },
-          { label: "NOT OK — DMI signal missing or erratic", type: "fail", next: "REPAIR_DMI" }
-        ]
-      },
-      "TERM_RESOLVED": { terminal: true, title: "Resolved", text: "Drive in manual mode to verify E1252 does not return." },
+      "1": { title: "Test Step 1: Check Location & Restart", text: "Ensure truck is away from highwalls/obstructions. Key OFF, wait 5 min, Key ON.", expected: "E1252 clears.", options: [{label: "OK — Cleared", type: "pass", next: "TERM_OK"}, {label: "NOT OK — Still active", type: "fail", next: "2"}] },
+      "2": { title: "Test Step 2: Check Front IMU & DMI Speed Signal", text: "Verify IMU mount is tight. Check WebOCS Positioning tab for DMI Speed matching TOS.", expected: "DMI speed matches Transmission Output Speed.", options: [{label: "OK — DMI matches TOS", type: "pass", next: "TERM_OK"}, {label: "NOT OK — DMI faulty", type: "fail", next: "REPAIR_DMI"}] },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "Drive in manual mode to verify position accuracy." },
       "REPAIR_DMI": { terminal: true, title: "Troubleshoot DMI / TOS (CID 0084)", text: "Check TOS Sensor #2 on rear axle and DMI Filter (388-7064) in autonomy cabinet." }
     }
   },
-
   "E1153": {
-    code: "E1153",
-    priority: 2,
+    code: "E1153", priority: 2, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine Safely",
     title: "Autonomous Steering Enable Valve Not Responding to Command",
-    mid: "MID 039 (MCM)",
-    sys: "MCM",
-    action: "Stop Machine Safely",
     desc: "Mismatch between commanded mode and Steering Enable Valve Position Sensor.",
     steps: {
-      "1": {
-        title: "Test Step 1: Check 8V Power at Sensor",
-        text: "Disconnect 3-pin connector from Selector/Diverter Valve Spool Position Sensor. Measure voltage between Pin A (C985-PK) and Pin B (C988-BK).",
-        expected: "8.0 ± 0.5 VDC.",
-        options: [
-          { label: "OK — ~8.0 VDC present", type: "pass", next: "2" },
-          { label: "NOT OK — Missing voltage", type: "fail", next: "REPAIR_8V" }
-        ]
-      },
-      "2": {
-        title: "Test Step 2: Check Sensor Signal Voltage",
-        text: "Reconnect sensor. Back-probe Pin B (Ground) and Pin C (Signal U736-YL, I/O J1-36).",
-        expected: "Manual: 2.3-2.8V | Auto: 3.6-4.1V.",
-        options: [
-          { label: "OK — Voltage within spec", type: "pass", next: "TERM_VALVE" },
-          { label: "NOT OK — Out of spec", type: "fail", next: "REPAIR_SENSOR" }
-        ]
-      },
-      "REPAIR_8V": { terminal: true, title: "Repair 8V Supply Wire", text: "Repair C985-PK or C988-BK harness wires to I/O Module J1." },
-      "REPAIR_SENSOR": { terminal: true, title: "Replace Position Sensor", text: "Replace steering diverter valve position sensor." },
-      "TERM_VALVE": { terminal: true, title: "Check Hydraulic Pilot Pressure", text: "Verify primary steering pilot pressure and replace steering selector valve if spool is sticking." }
+      "1": { title: "Test Step 1: Check 8V Power at Sensor", text: "Measure voltage between Pin A (C985-PK) and Pin B (C988-BK) at Steer Valve Spool Position Sensor.", expected: "8.0 ± 0.5 VDC.", options: [{label: "OK — 8V present", type: "pass", next: "2"}, {label: "NOT OK — Missing 8V", type: "fail", next: "REP_8V"}] },
+      "2": { title: "Test Step 2: Check Signal Voltage", text: "Back-probe Ground and Signal (U736-YL, I/O J1-36). Manual: 2.3-2.8V | Auto: 3.6-4.1V.", expected: "Voltage within range.", options: [{label: "OK — In range", type: "pass", next: "REP_VALVE"}, {label: "NOT OK — Out of range", type: "fail", next: "REP_SENS"}] },
+      "REP_8V": { terminal: true, title: "Repair 8V Supply Wire", text: "Repair C985-PK or C988-BK harness wires to I/O Module J1." },
+      "REP_SENS": { terminal: true, title: "Replace Position Sensor", text: "Replace steering diverter valve position sensor." },
+      "REP_VALVE": { terminal: true, title: "Check Hydraulic Pilot Pressure", text: "Verify primary steering pilot pressure and replace steering selector valve if spool is sticking." }
+    }
+  },
+  "E1330_E1483": {
+    code: "E1330 / E1483", priority: 2, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine / Derate",
+    title: "High Cabinet Temp (E1330) / Low Cabinet Fan Speed (E1483)",
+    desc: "Autonomy cabinet overheating or cooling fan speed below target.",
+    steps: {
+      "1": { title: "Test Step 1: Inspect Fan & Air Filter", text: "Check cabinet air filter on right-hand end of cabinet. Spin cabinet fan by hand to ensure free rotation.", expected: "Fan spins freely, filter is clean.", options: [{label: "OK — Free & clean", type: "pass", next: "2"}, {label: "NOT OK — Blocked filter / stuck fan", type: "fail", next: "REP_FAN"}] },
+      "2": { title: "Test Step 2: Run Cat ET Override Test", text: "In Cat ET, override Cabinet Cooling Fan to ON and set to 3000 RPM.", expected: "Fan runs smoothly.", options: [{label: "OK — Fan runs", type: "pass", next: "TERM_OK"}, {label: "NOT OK — Fan fails", type: "fail", next: "REP_FAN_PWR"}] },
+      "REP_FAN": { terminal: true, title: "Clean/Replace Filter or Fan", text: "Replace cabinet air filter or clear debris blocking fan." },
+      "REP_FAN_PWR": { terminal: true, title: "Check Fuse F13 & Fan Voltage", text: "Check 30A Fuse F13 in 24V fuse panel and I/O J1-48 fan drive output." },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "Key cycle AMT and verify event clears." }
+    }
+  },
+  "E1485": {
+    code: "E1485", priority: 1, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine Safely",
+    title: "Autonomous Stop Receiver Radio Not Receiving Radio Signals",
+    desc: "A-Stop receivers not communicating as expected (Ref: UENR5448 pg 125).",
+    steps: {
+      "1": { title: "Test Step 1: Inspect A-Stop Antennas & Coax", text: "Inspect left and right A-Stop antennas on mode light structure for damage, correct orientation, and tight coaxial connections.", expected: "Antennas and coax cables are secure and undamaged.", options: [{label: "OK — Secure & good", type: "pass", next: "2"}, {label: "NOT OK — Damaged antenna/coax", type: "fail", next: "REP_ASTOP"}] },
+      "2": { title: "Test Step 2: Use WebOCS A-Stop Locator", text: "Connect laptop to WebOCS and check A-Stop Locator tab to view dBm signal strength for LH and RH receivers.", expected: "Signal strength is normal and beacons are received.", options: [{label: "OK — Signal valid", type: "pass", next: "TERM_OK"}, {label: "NOT OK — No signal / receiver fault", type: "fail", next: "REP_REC"}] },
+      "REP_ASTOP": { terminal: true, title: "Repair/Replace A-Stop Antenna or Coax", text: "Replace damaged A-Stop antenna or coaxial cable." },
+      "REP_REC": { terminal: true, title: "Replace A-Stop Receiver", text: "Check 12V fuses F7 (LH) and F8 (RH) in 12V fuse box. If power is good, replace A-Stop receiver module." }
+    }
+  },
+  "PPS_COMM": {
+    code: "CID 4533 / 4534", priority: 1, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine Safely",
+    title: "Pulse Per Second (PPS) Module Not Communicating with Auto ECMs",
+    desc: "PPS module failing to provide RS232 timing synchronization to Auto ECMs / LiDAR.",
+    steps: {
+      "1": { title: "Test Step 1: Check PPS Power & Ground", text: "Check 24V power and ground connections to PPS buffer module in autonomy cabinet.", expected: "Correct power and ground voltages present.", options: [{label: "OK — Power good", type: "pass", next: "2"}, {label: "NOT OK — Bad power/ground", type: "fail", next: "REP_PPS_PWR"}] },
+      "2": { title: "Test Step 2: Inspect RS232 Output Communications", text: "Check continuity on RS232 output lines from PPS buffer to Auto ECMs and LiDAR #1 (Connector J1 pins 5, 7, 9, 11, 13, 70).", expected: "Continuity < 5 Ohms.", options: [{label: "OK — Continuity good", type: "pass", next: "REP_PPS_SWAP"}, {label: "NOT OK — Open harness", type: "fail", next: "REP_PPS_HARN"}] },
+      "REP_PPS_PWR": { terminal: true, title: "Repair PPS Power Supply", text: "Repair 24V supply or ground wire to PPS module." },
+      "REP_PPS_HARN": { terminal: true, title: "Repair PPS Harness", text: "Repair RS232 communication harness from PPS buffer." },
+      "REP_PPS_SWAP": { terminal: true, title: "Replace PPS Buffer Module", text: "Replace PPS buffer module with known good unit." }
+    }
+  },
+  "E1231_1241": {
+    code: "E1231 / E1241", priority: 1, sys: "MCM", mid: "MID 039 (MCM)", action: "Stop Machine Safely",
+    title: "Long Range LiDAR #1 Blockage Detected (E1231) or Spin Fault (E1241)",
+    desc: "Front-mounted LiDAR sensor #1 blocked by debris/objects or motor not spinning correctly.",
+    steps: {
+      "1": { title: "Test Step 1: Inspect Lens & Rotation", text: "Check LiDAR lens for mud/scratches. Ensure nothing is within 1m of 180° view. Listen for grinding noise (E1241).", expected: "Lens clean, spins freely without grinding.", options: [{label: "OK — Clean and spinning", type: "pass", next: "2"}, {label: "NOT OK — Dirty, blocked, or not spinning", type: "fail", next: "REP_LIDAR_FIX"}] },
+      "2": { title: "Test Step 2: Check Power & Ethernet", text: "Verify 24V switched power (Fuse F16), ground, and Ethernet connection to Switch 3 / Auto ECM #2.", expected: "24V power present and Ethernet link active.", options: [{label: "OK — Power/Ethernet good", type: "pass", next: "REP_REPLACE_LIDAR"}, {label: "NOT OK — Blown fuse F16 or loose plug", type: "fail", next: "REP_LIDAR_PWR"}] },
+      "REP_LIDAR_FIX": { terminal: true, title: "Clean Lens / Clear Field of View", text: "Wash lens with non-abrasive soap. Remove any obstructions within 1m of 180° FOV. Run Perception Calibration if scratched." },
+      "REP_LIDAR_PWR": { terminal: true, title: "Replace Fuse F16 / Secure Plug", text: "Replace 15A Fuse F16 in Autonomy Cabinet and secure GG-C4 / EK-C4 connectors." },
+      "REP_REPLACE_LIDAR": { terminal: true, title: "Replace LiDAR Sensor #1", text: "Replace LiDAR sensor, verify firmware per REHS7346, and perform Perception Calibration." }
+    }
+  },
+  "E1232_1236": {
+    code: "E1232 / E1234 / E1236", priority: 2, sys: "MCM", mid: "MID 039 (MCM)", action: "Informational",
+    title: "Front Bumper Radar Blockage Detected (#2, #4, #6)",
+    mid: "MID 039", sys: "MCM", action: "Informational",
+    desc: "Front radar reports blockage from mud, ice, moisture inside lens, or misalignment.",
+    steps: {
+      "1": { title: "Test Step 1: Inspect Radar Lens", text: "Check exterior for mud/ice and interior lens for trapped moisture/condensation.", expected: "Lens clean and dry inside and out.", options: [{label: "OK — Clean & dry", type: "pass", next: "TERM_RADAR"}, {label: "NOT OK — Dirty or moisture inside", type: "fail", next: "REP_RADAR_CLEAN"}] },
+      "REP_RADAR_CLEAN": { terminal: true, title: "Clean Radar / Replace Enclosure Gasket", text: "Wash exterior lens. If moisture is trapped inside enclosure, dry interior or replace seal/enclosure. Realign per OMM." },
+      "TERM_RADAR": { terminal: true, title: "Verify Alignment & Connectors", text: "Ensure 18-pin connector is tight and radar is securely bolted to bracket." }
     }
   },
 
+  // STEERING SYSTEM (MID 150)
   "E1374": {
-    code: "E1374",
-    priority: 1,
+    code: "E1374", priority: 1, sys: "STEER", mid: "MID 150 (Steering)", action: "Immediate Safe Shutdown",
     title: "Steering Valve Spool Not Responding to Command",
-    mid: "MID 150 (Steering)",
+    desc: "EH Steering Control Valve directional spool did not move in commanded direction (UENR2227).",
+    steps: {
+      "1": { title: "Test Step 1: Run Steering Service Mode Test in Cat ET", text: "Monitor spool position in Cat ET. Does spool shift ±7 mm during command? Does fault occur in one direction or both?", expected: "Identify failure pattern.", options: [{label: "Occurs in ONE direction only", type: "fail", next: "REP_SWAP_SOL"}, {label: "Occurs in BOTH directions (No steering)", type: "fail", next: "REP_VALVE_CONTAM"}] },
+      "REP_SWAP_SOL": { terminal: true, title: "Swap Primary Proportional Solenoids", text: "Swap Left (J1-67) and Right (J1-68) primary steering solenoids. If fault moves, replace faulty solenoid and calibrate." },
+      "REP_VALVE_CONTAM": { terminal: true, title: "Inspect EH Steering Valve for Contamination", text: "Main steering stem stuck with contamination. Remove valve for inspection and clean/replace." }
+    }
+  },
+  "E1375": {
+    code: "E1375", priority: 1, sys: "STEER", mid: "MID 150 (Steering)", action: "Immediate Safe Shutdown",
+    title: "Unexpected Steering Valve Spool Movement Detected",
+    desc: "Steering valve spool detected out of neutral without command, or secondary solenoid stuck open.",
+    steps: {
+      "1": { title: "Test Step 1: Check Neutral Spool Position Voltage", text: "In Cat ET, check spool position voltage. Neutral range is 2.167 to 2.833 VDC (±1.7 mm).", expected: "Voltage is within neutral range.", options: [{label: "OK — Voltage in neutral range", type: "pass", next: "2"}, {label: "NOT OK — Voltage outside neutral range", type: "fail", next: "REP_STUCK_SPOOL"}] },
+      "2": { title: "Test Step 2: Check Secondary Steering Solenoids", text: "Inspect secondary steering proportional/on-off solenoids for sticking open.", expected: "Solenoids de-energize properly.", options: [{label: "OK — Solenoids OK", type: "pass", next: "REP_PRIMARY_SOL"}, {label: "NOT OK — Secondary solenoid stuck open", type: "fail", next: "REP_SEC_SOL"}] },
+      "REP_STUCK_SPOOL": { terminal: true, title: "Clean / Replace Sticking Spool or Sensor", text: "Main steering valve stuck with contamination or spool position sensor failed in-range. Replace valve/sensor." },
+      "REP_PRIMARY_SOL": { terminal: true, title: "Replace Primary Proportional Solenoid", text: "Replace faulty primary steering proportional solenoid and recalibrate." },
+      "REP_SEC_SOL": { terminal: true, title: "Replace Secondary Steering Solenoid", text: "Replace stuck-open secondary steering solenoid." }
+    }
+  },
+  "E257_E258": {
+    code: "E257 / E258", priority: 1, sys: "STEER", mid: "MID 150 (Steering)", action: "Immediate Safe Shutdown",
+    title: "Steering Output Detected With No Command (E257) / No Steering (E258)",
+    desc: "Cylinder movement does not match autonomous system command.",
+    steps: {
+      "1": { title: "Test Step 1: Check Mechanical Linkage & Pressures", text: "Verify front axle, tie rods, and steering linkage have no excessive play, and hydraulic pressures are within spec.", expected: "Linkage tight and hydraulic pressures correct.", options: [{label: "OK — Linkage & pressures good", type: "pass", next: "2"}, {label: "NOT OK — Loose linkage or low pressure", type: "fail", next: "REP_MECH_HYD"}] },
+      "2": { title: "Test Step 2: Run Steering Service Test in Cat ET", text: "Run secondary steering service test in Cat ET. Does steering operate as expected in both directions?", expected: "Secondary steering operates normally.", options: [{label: "OK — Secondary steering works", type: "pass", next: "TERM_OK"}, {label: "NOT OK — Fails service test", type: "fail", next: "REP_VALVE_FAIL"}] },
+      "REP_MECH_HYD": { terminal: true, title: "Repair Linkage / Restore System Pressure", text: "Correct mechanical play in axle/pins/cylinders or troubleshoot steering pump margin and load signal network." },
+      "REP_VALVE_FAIL": { terminal: true, title: "Troubleshoot Steering Valve / Lines", text: "Check line/main system relief valves, steering hoses, or secondary steering pressure reducing valve." },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "System functioning normally." }
+    }
+  },
+  "STEER_41": {
+    code: "MID 150 - CID 0041 - FMI 03/04",
+    priority: 1,
     sys: "STEER",
-    action: "Immediate Safe Shutdown",
-    desc: "EH Steering Control Valve directional spool did not move in commanded direction.",
+    mid: "MID 150 (Steering)",
+    action: "Steering at Relief",
+    title: "Steering 8V Sensor Supply Voltage Above/Below Normal",
+    desc: "Steering ECM 8V sensor supply (Wire A118-OR, Pin J1-44) shorted high or low.",
     steps: {
-      "1": {
-        title: "Test Step 1: Run Steering Service Mode Test in Cat ET",
-        text: "Monitor spool position in Cat ET. Does spool shift ±7 mm during command? Does fault occur in one direction or both?",
-        expected: "Determine failure mode.",
-        options: [
-          { label: "Occurs in ONE direction only", type: "fail", next: "REPAIR_SOLENOID" },
-          { label: "Occurs in BOTH directions (No steering)", type: "fail", next: "REPAIR_VALVE_STUCK" }
-        ]
-      },
-      "REPAIR_SOLENOID": { terminal: true, title: "Replace Primary Proportional Solenoid", text: "Swap primary solenoids to confirm, then replace the failed proportional solenoid and recalibrate." },
-      "REPAIR_VALVE_STUCK": { terminal: true, title: "Inspect Valve for Contamination / Replace Valve", text: "Main steering spool is stuck with contamination. Remove valve for inspection and clean/replace." }
+      "1": { title: "Test Step 1: Check 8V Supply Voltage at Sensor", text: "Measure voltage between Sensor Pin A (A118-OR) and Pin B (X719-OR Ground).", expected: "8.0 ± 0.5 VDC.", options: [{label: "OK — 8.0 VDC present", type: "pass", next: "TERM_OK"}, {label: "NOT OK — 0V or Battery voltage", type: "fail", next: "REP_STEER_8V"}] },
+      "REP_STEER_8V": { terminal: true, title: "Repair Harness Short or Replace Sensor", text: "Disconnect sensors one by one. If short clears, replace faulty sensor. If not, repair harness wire A118-OR shorted to +Battery or Ground." },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "Sensor supply voltage is within specification." }
     }
   },
 
+  // BRAKING SYSTEM (MID 116)
   "E526": {
-    code: "E526 (3)",
-    priority: 1,
+    code: "E526 (3)", priority: 1, sys: "BRAKE", mid: "MID 116 (Brake)", action: "Immediate Safe Shutdown",
     title: "Brake Pump Pressure Not Responding to Command",
-    mid: "MID 116 (Brake)",
-    sys: "BRAKE",
-    action: "Immediate Safe Shutdown",
-    desc: "Brake system commanding charge, but pump pressure is < 2,100 kPa (305 psi) for > 0.5s.",
+    desc: "Brake system commanding charge, but pump pressure < 2,100 kPa (305 psi) for > 0.5s.",
     steps: {
-      "1": {
-        title: "Test Step 1: Install Mechanical Gauge & Check Unloader",
-        text: "Install 35,000 kPa gauge on brake pump pressure tap. Monitor pressure rise when unloader status changes. Inspect unloader solenoid screen for debris.",
-        expected: "Pump builds pressure to 20,700 kPa (3,000 psi).",
-        options: [
-          { label: "Gauge builds pressure normally (Sensor faulty)", type: "pass", next: "REPAIR_SENSOR" },
-          { label: "Pump pressure stays at standby / unloader stuck", type: "fail", next: "REPAIR_PUMP" }
-        ]
-      },
-      "REPAIR_SENSOR": { terminal: true, title: "Replace Brake Pump Pressure Sensor", text: "Replace Brake Pump Pressure Sensor (CID 1962, J2-32)." },
-      "REPAIR_PUMP": { terminal: true, title: "Replace Unloader Solenoid / Brake Pump", text: "Clean/replace unloader valve and screen. Kidney loop oil if contaminated. If pump failed, replace pump." }
+      "1": { title: "Test Step 1: Install Mechanical Gauge & Check Unloader", text: "Install 35,000 kPa gauge on brake pump pressure tap. Inspect unloader solenoid screen for debris.", expected: "Pump builds pressure to 20,700 kPa (3,000 psi).", options: [{label: "Gauge builds pressure normally", type: "pass", next: "REP_BUMP_SENS"}, {label: "Pump pressure low / unloader stuck", type: "fail", next: "REP_UNLOADER"}] },
+      "REP_BUMP_SENS": { terminal: true, title: "Replace Brake Pump Pressure Sensor", text: "Replace Brake Pump Pressure Sensor (CID 1962, J2-32)." },
+      "REP_UNLOADER": { terminal: true, title: "Clean/Replace Unloader Valve & Pump", text: "Clean/replace brake pump unloader solenoid and screen. Kidney loop oil if contaminated. If pump failed, replace pump." }
+    }
+  },
+  "E652_E653": {
+    code: "E652 / E653", priority: 1, sys: "BRAKE", mid: "MID 116 (Brake)", action: "Stop / Safe Shutdown",
+    title: "Low Service (E652) or Secondary (E653) Brake Accumulator Pressure",
+    desc: "Accumulator pressure has dropped below operational limits.",
+    steps: {
+      "1": { title: "Test Step 1: Check Accumulator Bleed-Down Solenoid", text: "Check if primary and secondary accumulator pressures drop rapidly after key OFF. Inspect bleed-down/purge solenoid valve.", expected: "Accumulators hold pressure normally.", options: [{label: "OK — Holds pressure", type: "pass", next: "REP_ACCUM_CHARGE"}, {label: "NOT OK — Pressures drop rapidly", type: "fail", next: "REP_PURGE_SOL"}] },
+      "REP_ACCUM_CHARGE": { terminal: true, title: "Test Accumulator Charge & Pre-charge Pressure", text: "Test and charge brake accumulators per KENR8738. Ensure brake oil is ISO 18/15 or better." },
+      "REP_PURGE_SOL": { terminal: true, title: "Replace Accumulator Bleed-Down / Purge Solenoid", text: "Replace failed accumulator purge solenoid valve causing internal pressure bleed-down." }
+    }
+  },
+  "DATALINK_BRAKE": {
+    code: "CID 0247 / CID 0248 (Brake)", priority: 1, sys: "BRAKE", mid: "MID 116 (Brake)", action: "Stop Machine Safely",
+    title: "Brake ECM Data Link Failure (J1939 / Cat Data Link)",
+    desc: "Brake ECM lost communication with other ECMs over CAN A or CDL.",
+    steps: {
+      "1": { title: "Test Step 1: Inspect Harness & Terminating Resistors", text: "Check 120-Ohm terminating resistors on CAN A data link (should measure ~60 Ohms across CAN+ and CAN-). Inspect connectors J1/J2 on Brake ECM.", expected: "Terminating resistors measure 60 Ohms and harness is intact.", options: [{label: "OK — Resistors & harness good", type: "pass", next: "TERM_BRAKE_ECM"}, {label: "NOT OK — Bad resistor or open harness", type: "fail", next: "REP_RESISTOR_HARN"}] },
+      "REP_RESISTOR_HARN": { terminal: true, title: "Replace Terminating Resistor / Repair Harness", text: "Replace faulty 120-Ohm CAN terminating resistor or repair open/shorted CDL/CAN wiring per UENR2210 schematics." },
+      "TERM_BRAKE_ECM": { terminal: true, title: "Check Power & Ground to Brake ECM", text: "Verify battery power (Pins 31, 38, 39, 47) and ground (Pins 13, 23, 57) on Brake ECM J1." }
     }
   },
 
+  // C175 ENGINE (MID 036 / KENR5398)
   "E398_E1106": {
-    code: "E398 / E1106",
-    priority: 1,
-    title: "C175 Low Fuel Rail Pressure / High Pump Flow",
-    mid: "MID 036 (Engine)",
-    sys: "ENG",
-    action: "Level 2 Derate",
-    desc: "Common rail fuel pressure lower than commanded or HPFP flow excessive.",
+    code: "E398 / E1106", priority: 1, sys: "ENG", mid: "MID 036 (Engine)", action: "Level 2 Derate",
+    title: "C175 Low Fuel Rail Pressure (E398) / High Pump Flow (E1106)",
+    desc: "Common rail fuel pressure lower than commanded or HPFP flow excessive (KENR5398 pg 106).",
     steps: {
-      "1": {
-        title: "Test Step 1: Check Low-Pressure Fuel Transfer Pressure",
-        text: "In Cat ET, monitor 'Fuel Pressure (abs)' minus 'Atmospheric Pressure' at Low Idle and High Idle.",
-        expected: "Low Idle: > 250 kPa (36 psi) | High Idle: > 450 kPa (65 psi).",
-        options: [
-          { label: "OK — Low pressure is within spec", type: "pass", next: "REPAIR_HPFP" },
-          { label: "NOT OK — Low pressure is low", type: "fail", next: "REPAIR_LOW_FUEL" }
-        ]
-      },
-      "REPAIR_LOW_FUEL": { terminal: true, title: "Replace Fuel Filters & Check Transfer Pump", text: "Replace primary/secondary fuel filters and verify fuel transfer pump pressure." },
-      "REPAIR_HPFP": { terminal: true, title: "Check HPFP Relief Valve Temp & Replace Pump", text: "Check temp differential across HPFP valve block vs pump head. If >20°C, replace in-line high-pressure filter element and HPFP." }
+      "1": { title: "Test Step 1: Check Low-Pressure Fuel Transfer Pressure", text: "In Cat ET, monitor 'Fuel Pressure (abs)' minus 'Atmospheric Pressure' at Low Idle and High Idle.", expected: "Low Idle: > 250 kPa (36 psi) | High Idle: > 450 kPa (65 psi).", options: [{label: "OK — Low pressure is within spec", type: "pass", next: "REP_HPFP"}, {label: "NOT OK — Low pressure is low", type: "fail", next: "REP_LOW_FUEL"}] },
+      "REP_LOW_FUEL": { terminal: true, title: "Replace Fuel Filters & Check Transfer Pump", text: "Replace primary/secondary fuel filters and verify fuel transfer pump pressure." },
+      "REP_HPFP": { terminal: true, title: "Check HPFP Relief Valve Temp & Replace Pump", text: "Check temp differential across HPFP valve block vs pump head. If >20°C, replace in-line high-pressure filter element and HPFP." }
+    }
+  },
+  "E198_E2172": {
+    code: "E198 / E2172", priority: 2, sys: "ENG", mid: "MID 036 (Engine)", action: "Level 2 Derate",
+    title: "Low Fuel Pressure (E198) / Low Fuel Transfer Pump Inlet Pressure (E2172)",
+    desc: "Low-pressure fuel system pressure below trip point or vacuum < -50 kPa (-7 psi).",
+    steps: {
+      "1": { title: "Test Step 1: Check Fuel Level & Priming", text: "Verify fuel tank level, ensure supply valve is open, check fuel tank vent port, and prime low-pressure system.", expected: "Fuel system primed and fuel level normal.", options: [{label: "OK — Primed & level good", type: "pass", next: "2"}, {label: "NOT OK — Low level or plugged vent", type: "fail", next: "REP_FUEL_TANK"}] },
+      "2": { title: "Test Step 2: Check Fuel Filters & Transfer Pump", text: "Replace primary and secondary fuel filters. Test electric fuel priming pump and transfer pump pressure.", expected: "Correct fuel pressure generated during cranking.", options: [{label: "OK — Pressure correct", type: "pass", next: "TERM_OK"}, {label: "NOT OK — Low pressure", type: "fail", next: "REP_TRANSFER_PUMP"}] },
+      "REP_FUEL_TANK": { terminal: true, title: "Fill Tank / Clear Fuel Tank Vent", text: "Fill fuel tank and clear any restrictions in the fuel tank vent port." },
+      "REP_TRANSFER_PUMP": { terminal: true, title: "Replace Fuel Transfer Pump", text: "Replace faulty fuel transfer pump or electric priming pump." },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "Fuel pressure normal." }
+    }
+  },
+  "E361_E197": {
+    code: "E361 / E197", priority: 1, sys: "ENG", mid: "MID 036 (Engine)", action: "Level 3 Shutdown / Derate",
+    title: "High Coolant Temperature (E361) / High Engine Oil Temperature (E197)",
+    desc: "Engine coolant temperature > 110°C or oil temperature > 115°C.",
+    steps: {
+      "1": { title: "Test Step 1: Check Coolant Level & Radiator Fins", text: "Inspect coolant expansion tank level and check radiator fins for dirt, debris, or damage.", expected: "Coolant level correct and radiator fins clean.", options: [{label: "OK — Level good & radiator clean", type: "pass", next: "2"}, {label: "NOT OK — Low coolant or plugged radiator", type: "fail", next: "REP_COOLING"}] },
+      "2": { title: "Test Step 2: Check Temperature Control Module (TCM)", text: "Verify TCM operation and coolant temperature control valve position (three-way valve / 78°C setpoint).", expected: "TCM and valve operating normally.", options: [{label: "OK — TCM working", type: "pass", next: "TERM_OK"}, {label: "NOT OK — Stuck valve or TCM fault", type: "fail", next: "REP_TCM"}] },
+      "REP_COOLING": { terminal: true, title: "Add Coolant / Clean Radiator", text: "Fill coolant, repair leaks, and clean radiator / aftercooler core with compressed air/water." },
+      "REP_TCM": { terminal: true, title: "Troubleshoot TCM / Thermostatic Valve", text: "Inspect TCM 12-pin/8-pin connectors, test supply voltage (18-32V), and check mechanical movement of temperature control valve piston." },
+      "TERM_OK": { terminal: true, title: "Resolved", text: "Temperatures normal." }
+    }
+  },
+
+  // VIMS & PAYLOAD (MID 161/162 / UENR2225)
+  "VIMS_STRUT": {
+    code: "MID 162 - CID 0838 - 0841", priority: 2, sys: "VIMS", mid: "MID 162 (VIMS App)", action: "Payload / RAC Fault",
+    title: "Suspension Cylinder Strut Pressure Sensor Fault (CID 0838-0841)",
+    mid: "MID 162", sys: "VIMS", action: "Payload Fault",
+    desc: "VIMS Application ECM detects suspension cylinder pressure sensor voltage above normal (FMI 03), below normal (FMI 04), or abnormal frequency (FMI 08).",
+    steps: {
+      "1": { title: "Test Step 1: Check Sensor Supply Voltage (+V to Ground)", text: "At suspect strut pressure sensor connector, measure voltage between Contact A (+V, Wire 113-OR) and Contact B (Ground, Wire J849-WH).", expected: "22.0 DCV to 29.5 DCV.", options: [{label: "OK — 22 to 29.5 VDC present", type: "pass", next: "2"}, {label: "NOT OK — Missing supply voltage", type: "fail", next: "REP_STRUT_PWR"}] },
+      "2": { title: "Test Step 2: Check Sensor Signal Frequency (Unpressurized)", text: "Back-probe Signal (Wire 859-YL for LF) and Ground. Measure frequency (Hz) with engine off / unpressurized.", expected: "186 Hz to 214 Hz (at 10°C to 40°C).", options: [{label: "OK — Frequency in range", type: "pass", next: "TERM_STRUT_SWAP"}, {label: "NOT OK — Frequency out of range or dead", type: "fail", next: "REP_STRUT_SENS"}] },
+      "REP_STRUT_PWR": { terminal: true, title: "Repair Chassis Power Supply to Strut Sensors", text: "Trace 113-OR power circuit and J849-WH return wire to VIMS App ECM Pin 69." },
+      "REP_STRUT_SENS": { terminal: true, title: "Replace Strut Pressure Sensor & Calibrate", text: "Replace failed suspension cylinder pressure sensor and perform Payload Calibration (PAYCAL)." },
+      "TERM_STRUT_SWAP": { terminal: true, title: "Check Suspension Cylinder Charge", text: "If frequency is good, swap sensor with another corner to verify. If fault stays, service suspension cylinder oil/nitrogen charge per SEHS9411." }
+    }
+  },
+  "E2126": {
+    code: "E2126", priority: 2, sys: "VIMS", mid: "MID 039 / MID 162", action: "Limit Speed / Derate",
+    title: "Payload Overload Limit Exceeded (>120% MGMW)",
+    desc: "VIMS actual payload + empty machine weight exceeds Maximum Gross Machine Weight (MGMW). Derates truck to 15 km/h (9.3 mph) (Ref: UENR5448 pg 47).",
+    steps: {
+      "1": { title: "Test Step 1: Verify VIMS Payload Calibration", text: "Check if truck is actually overloaded or if TPMS calibration is incorrect. Verify empty weight and target payload settings in Cat ET.", expected: "Payload is within target limits and calibration is correct.", options: [{label: "OK — Payload normal, calibration skewed", type: "pass", next: "REP_PAYCAL"}, {label: "NOT OK — Truck is genuinely overloaded", type: "fail", next: "REP_DUMP_LOAD"}] },
+      "REP_PAYCAL": { terminal: true, title: "Perform VIMS Payload Calibration (PAYCAL)", text: "Run empty truck payload calibration procedure via Advisor or VIMSpc over hard level ground." },
+      "REP_DUMP_LOAD": { terminal: true, title: "Dump Load Safely", text: "Instruct loader operator to adhere to Cat 10/10/20 payload policy and avoid overloading beyond 120% MGMW." }
     }
   }
 };
@@ -663,25 +757,31 @@ function renderPills() {
   const sysFilter = document.getElementById('sysFilter');
   if(!container || !searchInput || !sysFilter) return;
 
-  const query = searchInput.value.toLowerCase();
+  const query = searchInput.value.toLowerCase().trim();
   const sys = sysFilter.value;
   container.innerHTML = '';
 
+  let matchCount = 0;
   Object.keys(faultDB).forEach(key => {
     const item = faultDB[key];
     const matchSys = (sys === 'ALL' || item.sys === sys);
-    const matchQuery = item.code.toLowerCase().includes(query) || item.title.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query);
+    const matchQuery = !query || item.code.toLowerCase().includes(query) || item.title.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query) || item.mid.toLowerCase().includes(query);
     if (matchSys && matchQuery) {
+      matchCount++;
       const inQueue = activeQueue.includes(key);
       const btn = document.createElement('div');
       btn.className = 'pill' + (key === currentFaultKey ? ' active' : '');
       btn.innerHTML = `
-        <span style="flex:1; cursor:pointer;" onclick="loadFault('${key}')"><strong>${item.code}</strong>: ${item.title.substring(0, 28)}...</span>
+        <span style="flex:1; cursor:pointer;" onclick="loadFault('${key}')"><strong>${item.code}</strong>: ${item.title.substring(0, 30)}...</span>
         <span class="pill-add" onclick="toggleQueue('${key}', event)">${inQueue ? '✓' : '+'}</span>
       `;
       container.appendChild(btn);
     }
   });
+
+  if (matchCount === 0) {
+    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem; padding:8px;">No matching autonomous codes found for "${query}". Try searching for 'steering', 'brakes', 'E1374', or 'fuel'.</span>`;
+  }
 }
 
 function loadFault(key) {
@@ -765,7 +865,6 @@ function goBack() {
   }
 }
 
-// Initialize on DOM load
 window.addEventListener('DOMContentLoaded', () => {
   renderQueue();
   renderPills();
